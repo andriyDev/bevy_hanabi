@@ -103,6 +103,9 @@ futures = "0.3"
 name = "firework"
 
 [[example]]
+name = "from_asset"
+
+[[example]]
 name = "portal"
 
 [[example]]
