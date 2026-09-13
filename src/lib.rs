@@ -2054,6 +2054,7 @@ fn compile_effects(
         Option<Ref<EffectParent>>,
         &mut CompiledParticleEffect,
     )>,
+    changed_effects: Query<(), AssetChanged<ParticleEffect>>,
 ) {
     trace!("compile_effects: {} effect(s)", q_effects.iter().len());
 
@@ -2127,11 +2128,17 @@ fn compile_effects(
             .map(std::mem::take)
             .unwrap_or_default();
 
-        // If the ParticleEffect didn't change, and the compiled one is for the correct
-        // asset, then there's nothing to do.
+        // If the ParticleEffect didn't change, the EffectAsset didn't change, and the compiled one
+        // is for the correct asset, then there's nothing to do.
         let material_changed = material.as_ref().is_some_and(|r| r.is_changed());
-        let need_rebuild =
-            effect.is_changed() || material_changed || compiled_effect.children != child_entities;
+        // Unfortunately, there isn't an easy way to check if an asset has changed. We'd have to
+        // listen to all AssetEvent messages, and figure out when to update. AssetChanged does that
+        // for us, so we can just take advantage of that with another query.
+        let asset_changed = changed_effects.contains(entity);
+        let need_rebuild = effect.is_changed()
+            || asset_changed
+            || material_changed
+            || compiled_effect.children != child_entities;
         if need_rebuild || (compiled_effect.asset != effect.handle) {
             if need_rebuild {
                 debug!("Invalidating the compiled cache for effect on entity {:?} due to changes in the ParticleEffect component. If you see this message too much, then performance might be affected. Find why the change detection of the ParticleEffect is triggered.", entity);
